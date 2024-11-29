@@ -1,39 +1,45 @@
 import { useState, useEffect } from "react";
 
 const useFavorite = ({ listingId, currentUser }) => {
+  console.log("Received listingId in hook:", listingId); // Debug
+
   const [hasFavorite, setHasFavorite] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.favoriteIds?.includes(listingId)) {
-      setHasFavorite(true); // Set to true if the listing is in the user's favorites
+    console.log("Effect triggered. CurrentUser:", currentUser, "ListingId:", listingId);
+    if (currentUser?.favorites?.includes(listingId)) {
+      setHasFavorite(true);
     }
   }, [currentUser, listingId]);
 
-  const toggleFavorite = async () => {
+ const toggleFavorite = async () => {
+    console.log("Toggling favorite for:", listingId); // Debug
     try {
       const response = await fetch("/api/favorites", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ listingId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ favoriteListingId: listingId }),
       });
 
-      // Check for response status and log it for debugging
-      if (!response.ok) {
-          const errorResponse = await response.text(); // Use .text() to check the raw response
-          console.error("Error response:", errorResponse);
-          return; 
-      }
+      // Log the full response object to inspect its structure
+      const responseData = await response.json();
+      console.log("API Response Data:", responseData); // This will show if you are getting the expected response
 
-      // If request was successful, toggle the favorite status
-      setHasFavorite(!hasFavorite);
+      if (response.ok) {
+        // Ensure the expected success message
+        if (responseData.message === "Favorite added successfully") {
+          setHasFavorite(!hasFavorite); // Toggle the favorite status
+        } else {
+          console.error("Unexpected response message:", responseData.message);
+        }
+      } else {
+        console.error("Error response:", responseData.message);
+      }
     } catch (error) {
-      console.error("Error toggling favorite:", error); // Log general error if any
+      console.error("Error toggling favorite:", error);
     }
   };
 
-  // Return only the primitive values
   return { hasFavorite, toggleFavorite };
 };
 

@@ -14,6 +14,7 @@ function ListingHead({
 }) {
   const { getByValue } = useCountries();
   const location = getByValue(locationValue);
+  console.log("Id Passed to Heart:", id);
 
   return (
     <>
@@ -37,6 +38,7 @@ function ListingHead({
           fill
           className="object-cover w-full"
         />
+        
         <div className="absolute top-5 right-5">
           <HeartButton listingId={id} currentUser={currentUser} />
         </div>

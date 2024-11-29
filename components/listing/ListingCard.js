@@ -52,6 +52,7 @@ function ListingCard({
     const end = new Date(reservation.endDate);
     return `${format(start, "PP")} - ${format(end, "PP")}`;
   }, [reservation]);
+  console.log("Rendering HeartButton with:", data._id, currentUser);
 
   return (
     <div

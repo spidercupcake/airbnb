@@ -1,52 +1,77 @@
- import dbConnect from '@/lib/mongooseClient'; // Path to dbConnect
-  import getCurrentUser from '@/app/actions/getCurrentUser'; // Function to get the current user
-  
-  export default async function handler(req, res) {
-    // Ensure database connection is established
-    await dbConnect();
-    const User = db.collection("users");
-  
-    if (req.method === 'POST') {
-      try {
-        const { favoriteListingId } = req.body;  // Get favorite listing ID from request
-        
-        // Get the current user
-        const currentUser = await getCurrentUser(); // Assuming this returns the currently authenticated user
-        
-        if (!currentUser || !currentUser._id) {
-          return res.status(404).json({ message: 'User not found or not authenticated' });
-        }
-  
-        // Fetch user from database using the current user's ID
-        const userId = currentUser._id;
-        const user = await User.findById(userId);
-  
-        if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-        }
-  
-        // Ensure 'favorites' is an array before adding to it
-        if (!user.favorites) {
-          user.favorites = [];
-        }
-  // Update favorite listings if not already in favorites
-  if (!user.favorites.includes(favoriteListingId)) {
-    user.favorites.push(favoriteListingId); // Add the listing to favorites
-  }
-       
-        
-        // Save the updated user data
-        await user.save();  // This should save the changes now
-  
-        // Respond with success
-        return res.status(200).json({ message: 'Favorite added successfully', user });
-      } catch (error) {
-        console.error('Error in favorite API:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
-      }
+import dbConnect from "@/lib/mongooseClient";
+import getCurrentUser from "@/app/actions/getCurrentUser";
+import { ObjectId } from "mongodb";
+
+export async function POST(req) {
+  try {
+    // Connect to the database
+    const db = await dbConnect();
+    
+    // Access the 'users' collection directly
+    const usersCollection = db.collection("users");
+
+    // Parse the request body
+    const { favoriteListingId } = await req.json();
+
+    // Validate input
+    if (!favoriteListingId) {
+      return new Response(
+        JSON.stringify({ message: "Favorite listing ID is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
-  
-    // Handle unsupported HTTP methods
-    return res.status(405).json({ message: 'Method Not Allowed' });
+
+    // Get the current user (you would retrieve this from session, JWT, or other means)
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser || !currentUser._id) {
+      return new Response(
+        JSON.stringify({ message: "User not found or not authenticated" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = currentUser._id;
+
+    // Ensure the _id is a valid ObjectId
+    if (!ObjectId.isValid(userId)) {
+      return new Response(
+        JSON.stringify({ message: "Invalid user ID" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update the user's favorites collection
+    const updatedUser = await usersCollection.findOneAndUpdate(
+      { _id: new ObjectId(userId) }, // Ensure _id is an ObjectId
+      {
+        $addToSet: { favorites: favoriteListingId }, // Add to favorites only if not already present
+      },
+      { returnDocument: "after" } // Return the updated document
+    );
+
+    // Check if the user document was returned after the update
+    if (!updatedUser || !updatedUser.value) {
+      return new Response(
+        JSON.stringify({ message: "User not found or update failed" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Return success response with the updated user information
+    return new Response(
+      JSON.stringify({
+        message: "Favorite added successfully",
+        user: updatedUser.value,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+    
+  } catch (error) {
+    console.error("Error in favorites API:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal Server Error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
-  
+}
