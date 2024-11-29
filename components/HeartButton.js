@@ -1,0 +1,32 @@
+"use client";
+
+import useFavorite from "@/hook/useFavorite";
+import { AiFillHeart, AiOutlineHeart } from "react-icons/ai";
+import React from "react";
+
+function HeartButton({ listingId, currentUser }) {
+  // Extract `hasFavorite` and `toggleFavorite` from `useFavorite` hook
+  const { hasFavorite, toggleFavorite } = useFavorite({
+    listingId,
+    currentUser,
+  });
+
+  return (
+    <div
+      onClick={toggleFavorite} // Trigger the toggleFavorite function on click
+      className="relative hover:opacity-80 transition cursor-pointer"
+    >
+      {/* Show a heart icon based on the `hasFavorite` state */}
+      <AiOutlineHeart
+        size={28}
+        className="fill-white absolute -top-[2px] -right-[2px]"
+      />
+      <AiFillHeart
+        size={24}
+        className={hasFavorite ? "fill-rose-500" : "fill-neutral-500/70"} // Conditionally render color based on `hasFavorite`
+      />
+    </div>
+  );
+}
+
+export default HeartButton;
