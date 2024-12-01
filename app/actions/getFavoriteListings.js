@@ -1,35 +1,44 @@
-import dbConnect from "@/lib/mongooseClient"; // Adjust the import path to your MongoDB client connection
+import dbConnect from "@/lib/mongooseClient";
 import getCurrentUser from "./getCurrentUser";
-import { ObjectId } from "mongodb"; // Ensure that ObjectId is imported
+import { ObjectId } from "mongodb";
 
 export default async function getFavoriteListings() {
   try {
-    const currentUser = await getCurrentUser();
+    // Connect to the database
+    const db = await dbConnect();
+    const usersCollection = db.collection("users");
+    const listingsCollection = db.collection("Listing");
 
-    if (!currentUser || !Array.isArray(currentUser.favoriteIds)) {
-      // If currentUser is null or favoriteIds is not an array, return an empty array
+    // Get the current user
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !currentUser._id) {
       return [];
     }
 
-    // Connect to the database
-    const db = await dbConnect();
+    const userId = currentUser._id;
 
-    // Fetch favorite listings from the database
-    const favorites = await db.collection("Listing").find({
-      _id: {
-        $in: currentUser.favoriteIds.map(id => new ObjectId(id)), // Convert string IDs to ObjectId
-      },
-    }).toArray();
+    // Retrieve the user's favorite listing IDs
+    const user = await usersCollection.findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { favorites: 1 } }
+    );
 
-    // Map through favorites and convert createdAt to ISO string
-    const safeFavorites = favorites.map((favorite) => ({
-      ...favorite,
-      createdAt: favorite.createdAt.toISOString(), // Convert to ISO string
+    if (!user || !user.favorites || user.favorites.length === 0) {
+      return [];
+    }
+
+    // Fetch listings for the user's favorites
+    const listings = await listingsCollection
+      .find({ _id: { $in: user.favorites.map((id) => new ObjectId(id)) } })
+      .toArray();
+
+    // Ensure plain JavaScript objects are returned
+    return listings.map((listing) => ({
+      ...listing,
+      _id: listing._id.toString(), // Convert ObjectId to string for serialization
     }));
-
-    return safeFavorites;
   } catch (error) {
-    console.error("Error in getFavoriteListings:", error); // Log the error for debugging
-    throw new Error(error.message);
+    console.error("Error in getFavoriteListings:", error);
+    return [];
   }
 }

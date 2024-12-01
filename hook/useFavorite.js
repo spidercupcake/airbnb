@@ -12,7 +12,7 @@ const useFavorite = ({ listingId, currentUser }) => {
     }
   }, [currentUser, listingId]);
 
- const toggleFavorite = async () => {
+  const toggleFavorite = async () => {
     console.log("Toggling favorite for:", listingId); // Debug
     try {
       const response = await fetch("/api/favorites", {
@@ -20,18 +20,12 @@ const useFavorite = ({ listingId, currentUser }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ favoriteListingId: listingId }),
       });
-
-      // Log the full response object to inspect its structure
+  
       const responseData = await response.json();
-      console.log("API Response Data:", responseData); // This will show if you are getting the expected response
-
+      console.log("API Response Data:", responseData);
+  
       if (response.ok) {
-        // Ensure the expected success message
-        if (responseData.message === "Favorite added successfully") {
-          setHasFavorite(!hasFavorite); // Toggle the favorite status
-        } else {
-          console.error("Unexpected response message:", responseData.message);
-        }
+        setHasFavorite(!hasFavorite); // Toggle the favorite status
       } else {
         console.error("Error response:", responseData.message);
       }

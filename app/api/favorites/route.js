@@ -6,14 +6,10 @@ export async function POST(req) {
   try {
     // Connect to the database
     const db = await dbConnect();
-    
-    // Access the 'users' collection directly
     const usersCollection = db.collection("users");
 
     // Parse the request body
     const { favoriteListingId } = await req.json();
-
-    // Validate input
     if (!favoriteListingId) {
       return new Response(
         JSON.stringify({ message: "Favorite listing ID is required" }),
@@ -21,9 +17,8 @@ export async function POST(req) {
       );
     }
 
-    // Get the current user (you would retrieve this from session, JWT, or other means)
+    // Retrieve the current user
     const currentUser = await getCurrentUser();
-
     if (!currentUser || !currentUser._id) {
       return new Response(
         JSON.stringify({ message: "User not found or not authenticated" }),
@@ -32,8 +27,6 @@ export async function POST(req) {
     }
 
     const userId = currentUser._id;
-
-    // Ensure the _id is a valid ObjectId
     if (!ObjectId.isValid(userId)) {
       return new Response(
         JSON.stringify({ message: "Invalid user ID" }),
@@ -41,36 +34,96 @@ export async function POST(req) {
       );
     }
 
-    // Update the user's favorites collection
-    const updatedUser = await usersCollection.findOneAndUpdate(
-      { _id: new ObjectId(userId) }, // Ensure _id is an ObjectId
-      {
-        $addToSet: { favorites: favoriteListingId }, // Add to favorites only if not already present
-      },
-      { returnDocument: "after" } // Return the updated document
+    // Update user's favorites
+    const updateResult = await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $addToSet: { favorites: favoriteListingId } } // Add to favorites if not present
     );
 
-    // Check if the user document was returned after the update
-    if (!updatedUser || !updatedUser.value) {
+    if (!updateResult.matchedCount) {
       return new Response(
-        JSON.stringify({ message: "User not found or update failed" }),
+        JSON.stringify({ message: "User not found" }),
         { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Return success response with the updated user information
     return new Response(
-      JSON.stringify({
-        message: "Favorite added successfully",
-        user: updatedUser.value,
-      }),
+      JSON.stringify({ message: "Favorite added successfully" }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
-    
   } catch (error) {
     console.error("Error in favorites API:", error);
     return new Response(
-      JSON.stringify({ error: "Internal Server Error" }),
+      JSON.stringify({ message: "Internal Server Error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const db = await dbConnect();
+    const usersCollection = db.collection("users");
+    const listingsCollection = db.collection("listings"); // Ensure collection name matches your database
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !currentUser._id) {
+      return new Response(
+        JSON.stringify({ message: "User not found or not authenticated" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = currentUser._id;
+    if (!ObjectId.isValid(userId)) {
+      return new Response(
+        JSON.stringify({ message: "Invalid user ID" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch the user's favorites
+    const user = await usersCollection.findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { favorites: 1 } }
+    );
+
+    if (!user || !user.favorites || user.favorites.length === 0) {
+      console.log("No favorites found for user:", userId); // Debugging log
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Convert string IDs to ObjectId
+    const favoriteIds = user.favorites.map((id) =>
+      ObjectId.isValid(id) ? new ObjectId(id) : null
+    ).filter(Boolean); // Filter out any invalid IDs
+
+    if (favoriteIds.length === 0) {
+      console.log("No valid favorite IDs found for user:", userId); // Debugging log
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Fetch the favorite listings
+    const listings = await listingsCollection
+      .find({ _id: { $in: favoriteIds } })
+      .toArray();
+
+    console.log("Fetched Listings:", listings); // Debugging log
+
+    return new Response(JSON.stringify(listings), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error in GET favorites API:", error);
+    return new Response(
+      JSON.stringify({ message: "Internal Server Error" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
