@@ -2,7 +2,6 @@
 
 import useRentModal from "@/hook/useRentModal";
 import axios from "axios";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -59,14 +58,6 @@ function RentModal() {
   const roomCount = watch("roomCount");
   const bathroomCount = watch("bathroomCount");
   const imageSrc = watch("imageSrc");
-
-  const Map = useMemo(
-    () =>
-      dynamic(() => import("../Map"), {
-        ssr: false,
-      }),
-    []
-  );
 
   const setCustomValue = (id, value) => {
     setValue(id, value, {
@@ -154,7 +145,6 @@ function RentModal() {
           value={location}
           onChange={(value) => setCustomValue("location", value)}
         />
-        <Map center={location?.latlng} />
       </div>
     );
   }

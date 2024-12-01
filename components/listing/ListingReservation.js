@@ -76,7 +76,7 @@ function ListingReservation({
 
       {/* Date and time inputs */}
       <div className="mb-4 flex flex-col md:flex-row md:items-center">
-        <div className="md:flex-1">
+        <div className="md:flex-1 relative">
           <label className="block text-sm font-medium text-neutral-600">Pick a date</label>
           <input
             type="text"
@@ -86,7 +86,7 @@ function ListingReservation({
             className="w-full border-none bg-transparent text-lg underline cursor-pointer"
           />
           {showCalendar && (
-            <div className="mt-2 z-10">
+            <div className="absolute top-full right-0 mt-2 z-10">
               <Calendar
                 mode="single" // Ensure it's set to single date selection
                 value={selectedDate ? new Date(selectedDate) : null} // Pass selected date
@@ -103,7 +103,9 @@ function ListingReservation({
               type="time"
               value={startTime}
               onChange={(e) => handleTimeChange(e, "start")}
+              onFocus={() => document.getElementById('start-time').showPicker()} // Open time picker when focused
               className="w-full border-none bg-transparent text-lg underline"
+              id="start-time"
             />
           </div>
           <div className="flex-1">
@@ -112,7 +114,9 @@ function ListingReservation({
               type="time"
               value={endTime}
               onChange={(e) => handleTimeChange(e, "end")}
+              onFocus={() => document.getElementById('end-time').showPicker()} // Open time picker when focused
               className="w-full border-none bg-transparent text-lg underline"
+              id="end-time"
             />
           </div>
         </div>

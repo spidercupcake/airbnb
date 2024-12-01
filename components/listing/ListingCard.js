@@ -52,7 +52,11 @@ function ListingCard({
     const end = new Date(reservation.endDate);
     return `${format(start, "PP")} - ${format(end, "PP")}`;
   }, [reservation]);
+
   console.log("Rendering HeartButton with:", data._id, currentUser);
+
+  // Fetch image array, if available
+  const images = data.imageSrc ? (Array.isArray(data.imageSrc) ? data.imageSrc : [data.imageSrc]) : [];
 
   return (
     <div
@@ -61,10 +65,11 @@ function ListingCard({
     >
       <div className="flex flex-col gap-2 w-full">
         <div className="aspect-square w-full relative overflow-hidden rounded-xl">
+          {/* Show only the first image from the array */}
           <Image
             fill
             className="object-cover h-full w-full group-hover:scale-110 transition"
-            src={data.imageSrc}
+            src={images[0] || "/default-image.jpg"} // Fallback image if array is empty
             alt="listing"
           />
           <div className="absolute top-3 right-3">
@@ -72,10 +77,10 @@ function ListingCard({
           </div>
           {/* Show confirmation icon if the reservation is confirmed */}
           {showConfirmation && (
-                        <div className="absolute top-3 left-3 bg-green-500 text-white p-2 rounded-full">
-                            ✔️
-                        </div>
-                    )}
+            <div className="absolute top-3 left-3 bg-green-500 text-white p-2 rounded-full">
+              ✔️
+            </div>
+          )}
         </div>
         <div className="font-semibold text-lg">
           {location?.region}, {location?.label}
